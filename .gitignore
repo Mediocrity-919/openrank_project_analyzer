@@ -1,2 +1,7 @@
-*_raw.json
-*_summary.csv
+后端backend/resutls/
+
+数据获取/*_raw*
+数据获取/*_summary*
+
+python/*_data*
+python/*_report*
