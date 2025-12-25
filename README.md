@@ -166,7 +166,7 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
 
 为方便在未安装系统 Python 的环境运行，本项目提供自动引导的便携式 Python 运行：
 
-- 首次运行时，双击或在终端执行 [`run.bat`](./run.bat)，脚本会自动下载并解压 Windows 官方**嵌入式 Python**到 [`python_runtime/`](./python_runtime/)，并安装项目依赖（可能耗时较长）。
+- 首次运行时，双击或在终端执行 [`run.bat`](./run.bat)，脚本会自动下载并解压 Windows 官方**嵌入式 Python**到 `python_runtime/`，并安装项目依赖（可能耗时较长）。
 - 后端服务通过 [`.env`](./backend/.env) 里的 `PYTHON_PATH` 指向内置解释器，无需系统级 Python。
 
 **注意事项：**
@@ -187,7 +187,7 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
 
 由于 GitHub 对未认证的 API 访问有较低的速率限制（每小时60次请求），建议在高频使用场景下配置 GitHub 个人访问令牌（PAT）以提升访问速率。
 
-1. 生成 TOKEN：登录 GitHub 账号，访问[Settings/Developer Settings/Personal access tokens](https://github.com/settings/tokens)，生成一个新的`Personal access tokens (classic)`，勾选所需权限（通常只需 `repo` 权限）。
+1. 生成 TOKEN：登录 GitHub 账号，访问[Settings -> Developer Settings -> Personal access tokens](https://github.com/settings/tokens)，生成一个新的`Personal access tokens (classic)`，勾选所需权限（通常只需 `repo` 权限）。
 2. 复制生成的 TOKEN，妥善保存。（这些TOKEN只在生成时可见，如果没复制就彻底没了）
 3. 配置 TOKEN：（任选其一）
   在环境变量中添加 `GITHUB_TOKEN`，值为刚刚复制的个人访问令牌。
@@ -248,4 +248,4 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
 
 ### 6.4 风险得分
 
-风险分析函数[analyze_risk](./python/v4.py/)通过活跃度趋势下降、技术债压力和项目活力状态三方面累加风险分，并将其映射为直观的风险等级与告警信息。
+风险分析函数 [analyze_risk](./python/v4.py/) 通过活跃度趋势下降、技术债压力和项目活力状态三方面累加风险分，并将其映射为直观的风险等级与告警信息。
