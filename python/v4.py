@@ -2685,7 +2685,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
 
     # 优先读取 .env 文件
-    env_path = Path(__file__).parent.parent / ".env"
+    env_path = Path(__file__).parent.parent / "backend" / ".env"
     if env_path.exists():
         try:
             load_dotenv(dotenv_path=env_path)

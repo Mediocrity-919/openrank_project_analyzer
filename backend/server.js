@@ -106,7 +106,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 静态文件服务
 app.use('/results', express.static(CONFIG.resultsDir));
 // 添加前端静态文件服务
-app.use(express.static(path.join(__dirname, '../前端frontend')));
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // 健康检查
 app.get('/health', (req, res) => {
@@ -115,7 +115,7 @@ app.get('/health', (req, res) => {
 
 // 根路径重定向到前端首页
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../前端frontend/index.html'));
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 // 运行Python脚本的通用函数

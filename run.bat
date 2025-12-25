@@ -18,4 +18,4 @@ REM Open frontend
 start http://localhost:5501
 
 REM Start Node backend server
-node "%REPO_ROOT%ºó¶Ëbackend\server.js"
+node "%REPO_ROOT%backend\server.js"
