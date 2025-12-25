@@ -10,7 +10,9 @@
     - [3.2 趋势预测原理](#32-趋势预测原理)
     - [3.3 健康评估原理](#33-健康评估原理)
   - [4. 输出呈现](#4-输出呈现)
-  - [5. 内置 Python 运行](#5-内置-python-运行)
+  - [5. 注意事项](#5-注意事项)
+    - [5.1 内置 Python 运行](#51-内置-python-运行)
+    - [5.2 GitHub API 访问限制](#52-github-api-访问限制)
 
 ## 1. 项目概述
 
@@ -93,7 +95,9 @@
 
 ## 4. 输出呈现
 
-## 5. 内置 Python 运行
+## 5. 注意事项
+
+### 5.1 内置 Python 运行
 
 为方便在未安装系统 Python 的环境运行，本项目提供自动引导的便携式 Python 运行：
 
@@ -113,3 +117,13 @@
   ```
 
 - 然后运行 `run.bat` 启动服务即可。
+
+### 5.2 GitHub API 访问限制
+
+由于 GitHub 对未认证的 API 访问有较低的速率限制（每小时60次请求），建议在高频使用场景下配置 GitHub 个人访问令牌（PAT）以提升访问速率。
+
+1. 生成 TOKEN：登录 GitHub 账号，访问[Settings/Developer Settings/Personal access tokens](https://github.com/settings/tokens)，生成一个新的`Personal access tokens (classic)`，勾选所需权限（通常只需 `repo` 权限）。
+2. 复制生成的 TOKEN，妥善保存。（这些TOKEN只在生成时可见，如果没复制就彻底没了）
+3. 配置 TOKEN：（任选其一）
+  在环境变量中添加 `GITHUB_TOKEN`，值为刚刚复制的个人访问令牌。
+  在本项目的根目录中新建 `.env` 文件，并添加：`GITHUB_TOKEN=你的个人访问令牌`。

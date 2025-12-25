@@ -2701,15 +2701,5 @@ if __name__ == "__main__":
         url = sys.argv[1]
         token = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_TOKEN
 
-    if not token:
-        print("[警告] 未检测到 GitHub Token，API 速率将受限。建议在 .env 文件或环境变量中设置 GITHUB_TOKEN 以获得更高速率。\n")
-
     analyzer = ProjectAnalyzerV45(url, github_token=token)
     result = analyzer.run()
-
-    if result:
-        print("\n分析完成!")
-        print(f"   - 层级: {result.tier} ({TIER_NAMES[result.tier]})")
-        print(f"   - 健康评分: {result.health_score}/100 ({result.health_grade})")
-        print(f"   - 预测置信度: {result.backtest_results.get('overall_confidence_level', 'N/A')}")
-        print(f"   - 最佳预测指标: {max(result.tier_probabilities.items(), key=lambda x: x[1])[0]}")
