@@ -6,9 +6,9 @@ REM Determine repo root
 set REPO_ROOT=%~dp0
 
 REM Bootstrap portable Python if missing
-if not exist "%REPO_ROOT%python_runtime\python.exe" (
+if not exist "%REPO_ROOT%python\python_runtime\python.exe" (
 	echo [INFO] Setting up embedded Python runtime...
-	powershell -ExecutionPolicy Bypass -File "%REPO_ROOT%scripts\setup_python_runtime.ps1"
+	powershell -ExecutionPolicy Bypass -File "%REPO_ROOT%python\scripts\setup_python_runtime.ps1"
 )
 
 REM Open frontend

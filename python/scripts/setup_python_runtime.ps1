@@ -79,7 +79,7 @@ Write-Info "Installing pip ..."
 Remove-Item $getPipPath -Force
 
 # Install project requirements
-$requirementsPath = Join-Path $repoRoot "requirements.txt"
+$requirementsPath = Join-Path $scriptDir "requirements.txt"
 if (!(Test-Path $requirementsPath)) {
     Write-Warn "requirements.txt not found at $requirementsPath; skipping dependency install"
 } else {

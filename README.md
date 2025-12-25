@@ -171,7 +171,7 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
 
 **注意事项：**
 
-- 依赖中包含 `prophet`，在 Windows 上安装可能较慢或需要额外的构建工具；如遇安装困难，可先移除 [`requirements.txt`](./requirements.txt) 中的 `prophet`，功能会有部分受限。
+- 依赖中包含 `prophet`，在 Windows 上安装可能较慢或需要额外的构建工具；如遇安装困难，可先移除 [`requirements.txt`](./python/scripts/requirements.txt) 中的 `prophet`，功能会有部分受限。
 
 **手动初始化：**：（可选，因为直接运行 [`run.bat`](./run.bat) 会自动初始化）
 
