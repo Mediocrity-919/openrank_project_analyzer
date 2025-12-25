@@ -166,14 +166,14 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
 
 为方便在未安装系统 Python 的环境运行，本项目提供自动引导的便携式 Python 运行：
 
-- 首次运行时，双击或在终端执行 `run.bat`，脚本会自动下载并解压 Windows 官方**嵌入式 Python**到 `python_runtime/`，并安装项目依赖（可能耗时较长）。
-- 后端服务通过环境变量 `PYTHON_PATH` 指向内置解释器，无需系统级 Python。
+- 首次运行时，双击或在终端执行 [`run.bat`](./run.bat)，脚本会自动下载并解压 Windows 官方**嵌入式 Python**到 [`python_runtime/`](./python_runtime/)，并安装项目依赖（可能耗时较长）。
+- 后端服务通过 [`.env`](./backend/.env) 里的 `PYTHON_PATH` 指向内置解释器，无需系统级 Python。
 
 **注意事项：**
 
-- 依赖中包含 `prophet`，在 Windows 上安装可能较慢或需要额外的构建工具；如遇安装困难，可先移除 `requirements.txt` 中的 `prophet`，功能会有部分受限。
+- 依赖中包含 `prophet`，在 Windows 上安装可能较慢或需要额外的构建工具；如遇安装困难，可先移除 [`requirements.txt`](./requirements.txt) 中的 `prophet`，功能会有部分受限。
 
-**手动初始化：**：（可选，因为直接运行 `run.bat` 会自动初始化）
+**手动初始化：**：（可选，因为直接运行 [`run.bat`](./run.bat) 会自动初始化）
 
 - 命令行执行以下命令自动安装便携式 Python 与依赖。
   
@@ -181,7 +181,7 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
     PowerShell -ExecutionPolicy Bypass -File .\scripts\setup_python_runtime.ps1
   ```
 
-- 然后运行 `run.bat` 启动服务即可。
+- 然后运行 [`run.bat`](./run.bat) 启动服务即可。
 
 ### 5.2 GitHub API 访问限制
 
@@ -191,7 +191,7 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
 2. 复制生成的 TOKEN，妥善保存。（这些TOKEN只在生成时可见，如果没复制就彻底没了）
 3. 配置 TOKEN：（任选其一）
   在环境变量中添加 `GITHUB_TOKEN`，值为刚刚复制的个人访问令牌。
-  在本项目的根目录中新建 `.env` 文件，并添加：`GITHUB_TOKEN=你的个人访问令牌`。
+  在 [`.env`](./backend/.env) 文件中添加：`GITHUB_TOKEN=你的个人访问令牌`。
 
 ## 6 附录
 

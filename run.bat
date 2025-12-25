@@ -11,9 +11,6 @@ if not exist "%REPO_ROOT%python_runtime\python.exe" (
 	powershell -ExecutionPolicy Bypass -File "%REPO_ROOT%scripts\setup_python_runtime.ps1"
 )
 
-REM Wire PYTHON_PATH for backend
-set PYTHON_PATH=%REPO_ROOT%python_runtime\python.exe
-
 REM Open frontend
 start http://localhost:5501
 
