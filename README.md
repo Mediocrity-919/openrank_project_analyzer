@@ -180,7 +180,7 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
   )
   ```
 
-  部分，并在环境变量或 [`.env`](./backend/.env) 中配置 `PYTHON_PATH` 指向您系统中的 `python.exe` 解释器路径。
+  部分，并在 [`.env`](./backend/.env) 中修改 `PYTHON_PATH` ，以确保 `PYTHON_PATH` 指向您系统中的 `python.exe` 解释器路径。
 - 确保您的本地 Python 版本 $\ge$ 3.11 且已安装所需依赖（可通过命令行 `pip install -r ./python/scripts/requirements.txt` 安装）。
 
 ### 5.2 GitHub API 访问限制
