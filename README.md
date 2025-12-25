@@ -169,19 +169,19 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
 - 首次运行时，双击或在终端执行 [`run.bat`](./run.bat)，脚本会自动下载并解压 Windows 官方**嵌入式 Python**到 `python_runtime/`，并安装项目依赖（可能耗时较长）。
 - 后端服务通过 [`.env`](./backend/.env) 里的 `PYTHON_PATH` 指向内置解释器，无需系统级 Python。
 
-**注意事项：**
+**如果您不希望该项目安装内置的 Python:**
 
-- 依赖中包含 `prophet`，在 Windows 上安装可能较慢或需要额外的构建工具；如遇安装困难，可先移除 [`requirements.txt`](./python/scripts/requirements.txt) 中的 `prophet`，功能会有部分受限。
-
-**手动初始化：**：（可选，因为直接运行 [`run.bat`](./run.bat) 会自动初始化）
-
-- 命令行执行以下命令自动安装便携式 Python 与依赖。
+- 请注释掉 [`run.bat`](./run.bat) 文件中的
   
-  ```powershell
-    PowerShell -ExecutionPolicy Bypass -File .\scripts\setup_python_runtime.ps1
+  ```batch
+  if not exist "%REPO_ROOT%python\python_runtime\python.exe" (
+    echo [INFO] Setting up embedded Python runtime...
+    powershell -ExecutionPolicy Bypass -File "%REPO_ROOT%python\scripts\setup_python_runtime.ps1"
+  )
   ```
 
-- 然后运行 [`run.bat`](./run.bat) 启动服务即可。
+  部分，并在环境变量或 [`.env`](./backend/.env) 中配置 `PYTHON_PATH` 指向您系统中的 `python.exe` 解释器路径。
+- 确保您的本地 Python 版本 $\ge$ 3.11 且已安装所需依赖（可通过命令行 `pip install -r ./python/scripts/requirements.txt` 安装）。
 
 ### 5.2 GitHub API 访问限制
 
