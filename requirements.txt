@@ -11,3 +11,6 @@ requests>=2.31
 
 # Time-series forecasting (may take time/install extra toolchains)
 prophet>=1.1.5
+
+# 读取.env文件支持
+python-dotenv>=1.0

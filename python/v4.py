@@ -2680,18 +2680,33 @@ class ProjectAnalyzerV45:
         ax.grid(True, axis='y', alpha=0.3)
 
 if __name__ == "__main__":
-    import sys
-    DEFAULT_TOKEN="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"
+    import sys, os
+    from pathlib import Path
+    from dotenv import load_dotenv
+
+    # 优先读取 .env 文件
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        try:
+            load_dotenv(dotenv_path=env_path)
+        except Exception:
+            pass
+
+    DEFAULT_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+
     if len(sys.argv) < 2:
-        url = input("请输入 GitHub 项目地址: ").strip()      
+        url = input("请输入 GitHub 项目地址: ").strip()
         token = DEFAULT_TOKEN
     else:
         url = sys.argv[1]
         token = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_TOKEN
-    
+
+    if not token:
+        print("[警告] 未检测到 GitHub Token，API 速率将受限。建议在 .env 文件或环境变量中设置 GITHUB_TOKEN 以获得更高速率。\n")
+
     analyzer = ProjectAnalyzerV45(url, github_token=token)
     result = analyzer.run()
-    
+
     if result:
         print("\n分析完成!")
         print(f"   - 层级: {result.tier} ({TIER_NAMES[result.tier]})")
