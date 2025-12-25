@@ -31,7 +31,7 @@
 
 ### 2.1 数据分析预测
 
-**GitHub项目深度分析器**允许您传入**一个或多个Github仓库地址**，根据您的输入自动获取对应仓库的各项指标数据，并对其进行评估分析，以及对其发展趋势做出预测，最终将结果以图表、TXT等格式输出。
+**GitHub项目深度分析器**允许你传入**一个或多个Github仓库地址**，根据你的输入自动获取对应仓库的各项指标数据，并对其进行评估分析，以及对其发展趋势做出预测，最终将结果以图表、TXT等格式输出。
 
 - 支持的指标：openrank、activity、stars、attention、participants、contributors等。
 - 预测的范围：openrank、stars、attention指标未来6个月的变化趋势。
@@ -40,13 +40,13 @@
 
 ### 2.2 多个项目对比
 
-在**数据分析**功能的基础上，**GitHub项目深度分析器**允许您传入**两个及以上的Github仓库地址**，根据您的输入自动获取对应仓库的各项指标数据，对其进行评估分析后将其与其它项目的各项指标进行对比，最终将结果以图表、TXT等格式输出。
+在**数据分析**功能的基础上，**GitHub项目深度分析器**允许你传入**两个及以上的Github仓库地址**，根据你的输入自动获取对应仓库的各项指标数据，对其进行评估分析后将其与其它项目的各项指标进行对比，最终将结果以图表、TXT等格式输出。
 
 // TO DO 展示图片
 
 ## 3 分析过程
 
-**GitHub项目深度分析器**将通过以下几个步骤对您的项目进行深入分析。
+**GitHub项目深度分析器**将通过以下几个步骤对你的项目进行深入分析。
 
 1. **项目分层**：
    基于平均**OpenRank**、**总Stars数**、**最大贡献者数**三个指标，使用GMM模型进行概率化分层，将项目分为**GIANT**、**MATURE**、**GROWING**、**EMERGING**四个层级，从而提供更准确的项目画像。
@@ -169,7 +169,7 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
 - 首次运行时，双击或在终端执行 [`run.bat`](./run.bat)，脚本会自动下载并解压 Windows 官方**嵌入式 Python**到 `python_runtime/`，并安装项目依赖（可能耗时较长）。
 - 后端服务通过 [`.env`](./backend/.env) 里的 `PYTHON_PATH` 指向内置解释器，无需系统级 Python。
 
-**如果您不希望该项目安装内置的 Python:**
+**如果你不希望该项目安装内置的 Python:**
 
 - 请注释掉 [`run.bat`](./run.bat) 文件中的
   
@@ -180,8 +180,8 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
   )
   ```
 
-  部分，并在 [`.env`](./backend/.env) 中修改 `PYTHON_PATH` ，以确保 `PYTHON_PATH` 指向您系统中的 `python.exe` 解释器路径。
-- 确保您的本地 Python 版本 $\ge$ 3.11 且已安装所需依赖（可通过命令行 `pip install -r ./python/scripts/requirements.txt` 安装）。
+  部分，并在 [`.env`](./backend/.env) 中修改 `PYTHON_PATH` ，以确保 `PYTHON_PATH` 指向你系统中的 `python.exe` 解释器路径。
+- 确保你的本地 Python 版本 $\ge$ 3.11 且已安装所需依赖（可通过命令行 `pip install -r ./python/scripts/requirements.txt` 安装）。
 
 ### 5.2 GitHub API 访问限制
 
@@ -190,8 +190,9 @@ AHP（层次分析法）是一种多准则决策方法，它将复杂问题分�
 1. 生成 TOKEN：登录 GitHub 账号，访问[Settings -> Developer Settings -> Personal access tokens](https://github.com/settings/tokens)，生成一个新的`Personal access tokens (classic)`，勾选所需权限（通常只需 `repo` 权限）。
 2. 复制生成的 TOKEN，妥善保存。（这些TOKEN只在生成时可见，如果没复制就彻底没了）
 3. 配置 TOKEN：（任选其一）
-  在环境变量中添加 `GITHUB_TOKEN`，值为刚刚复制的个人访问令牌。
-  在 [`.env`](./backend/.env) 文件中添加：`GITHUB_TOKEN=你的个人访问令牌`。
+   - 在 [`.env`](./backend/.env) 文件中添加：`GITHUB_TOKEN=你的个人访问令牌`。(优先级别高于环境变量)
+   - 在环境变量中添加 `GITHUB_TOKEN`，值为刚刚复制的个人访问令牌。
+
 
 ## 6 附录
 
