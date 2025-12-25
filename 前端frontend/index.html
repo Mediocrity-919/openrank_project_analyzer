@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub项目分析器</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <div class="logo">
+                <i class="fab fa-github"></i>
+                <h1>GitHub项目分析器</h1>
+            </div>
+            <p class="subtitle">深度分析GitHub项目的健康状况与趋势预测</p>
+            
+            <!-- 导航栏 -->
+            <nav class="navbar">
+                <a href="index.html" class="nav-link active"><i class="fas fa-home"></i> 首页</a>
+                <a href="single-analysis.html" class="nav-link"><i class="fas fa-chart-line"></i> 单项目分析</a>
+                <a href="compare-analysis.html" class="nav-link"><i class="fas fa-balance-scale"></i> 项目对比</a>
+                <a href="multi-analysis.html" class="nav-link"><i class="fas fa-code-branch"></i> 多项目对比</a>
+                <a href="#results" class="nav-link"><i class="fas fa-history"></i> 历史结果</a>
+            </nav>
+        </header>
+
+        <!-- 主内容 -->
+        <main class="main-content">
+            <!-- 功能介绍 -->
+            <div class="features-container">
+                <h2><i class="fas fa-star"></i> 功能介绍</h2>
+                
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3>单项目分析</h3>
+                        <p>深度分析单个GitHub项目的健康状况、活力状态和增长潜力</p>
+                        <a href="single-analysis.html" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> 开始分析
+                        </a>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                        <h3>项目对比</h3>
+                        <p>对比两个GitHub项目的健康状况、活跃度和发展趋势</p>
+                        <a href="compare-analysis.html" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> 开始对比
+                        </a>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-code-branch"></i>
+                        </div>
+                        <h3>多项目对比</h3>
+                        <p>同时对比多个GitHub项目，分析它们的相对优势和劣势</p>
+                        <a href="multi-analysis.html" class="btn btn-primary">
+                            <i class="fas fa-arrow-right"></i> 开始对比
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 历史结果 -->
+            <div id="results" class="results-section">
+                <h2><i class="fas fa-history"></i> 历史分析结果</h2>
+                
+                <!-- 历史结果列表容器 -->
+                <div class="results-list-container">
+                    <div class="results-filter">
+                        <button class="filter-btn active" data-filter="all">全部</button>
+                        <button class="filter-btn" data-filter="single">单项目分析</button>
+                        <button class="filter-btn" data-filter="compare">项目对比</button>
+                        <button class="filter-btn" data-filter="multi">多项目对比</button>
+                    </div>
+                    <button id="refresh-results" class="btn btn-secondary">
+                        <i class="fas fa-sync-alt"></i> 刷新列表
+                    </button>
+                    <button id="clear-results" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> 清除所有结果
+                    </button>
+                    
+                    <div id="results-list" class="results-list">
+                        <!-- 历史结果将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 加载动画 -->
+            <div id="loading" class="loading-overlay">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>正在加载中，请稍候...</p>
+                    <p class="loading-hint">这可能需要几秒钟时间</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- 底部 -->
+        <footer class="footer">
+            <p>GitHub项目分析器 &copy; 2023 | 使用 OpenDigger 数据</p>
+            <p class="footer-links">
+                <a href="#" id="show-help">使用帮助</a> | 
+                <a href="https://github.com" target="_blank">GitHub</a>
+            </p>
+        </footer>
+
+        <!-- 帮助对话框 -->
+        <div id="help-dialog" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-question-circle"></i> 使用帮助</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <h3>如何使用</h3>
+                    <ol>
+                        <li>从导航栏选择您需要的功能：单项目分析、项目对比或多项目对比</li>
+                        <li>在对应页面输入GitHub项目URL</li>
+                        <li>点击"开始分析"或"开始对比"按钮</li>
+                        <li>等待分析完成（可能需要几分钟）</li>
+                        <li>查看生成的图表和分析报告</li>
+                    </ol>
+
+                    <h3>注意事项</h3>
+                    <ul>
+                        <li>仅支持公开的GitHub仓库</li>
+                        <li>分析可能需要几分钟时间，请耐心等待</li>
+                        <li>生成的图表和报告会自动保存到历史结果中</li>
+                        <li>您可以在首页查看和管理历史结果</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
