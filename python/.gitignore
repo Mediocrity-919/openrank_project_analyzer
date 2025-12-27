@@ -1,3 +1,5 @@
 *_data*
 *_report*
-multi_compare_output/*
+*.png
+
+python_runtime/

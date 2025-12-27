@@ -16,6 +16,7 @@ import os
 from datetime import datetime
 import json
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # 导入v4.py中的组件
 try:
     from v4 import (
@@ -830,7 +831,7 @@ if __name__ == "__main__":
         # print("\n\n程序被用户中断")
         sys.exit(1)
     except Exception as e:
-        # print(f"\n\n程序运行出错: {e}")
+        print(f"\n\nERROR {e}")
         # import traceback
         # traceback.print_exc()
         sys.exit(1)

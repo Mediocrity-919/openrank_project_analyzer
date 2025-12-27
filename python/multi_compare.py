@@ -16,6 +16,7 @@ from datetime import datetime
 import json
 import warnings
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.dont_write_bytecode = True
 
 warnings.filterwarnings("ignore", category=UserWarning)

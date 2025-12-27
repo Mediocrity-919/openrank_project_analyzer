@@ -1,0 +1,17 @@
+# Core scientific stack
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+scikit-learn>=1.3
+matplotlib>=3.8
+seaborn>=0.13
+plotly>=5.0
+
+# HTTP
+requests>=2.31
+
+# Time-series forecasting (may take time/install extra toolchains)
+prophet>=1.1.5
+
+# Read the `.env` file
+python-dotenv>=1.0
