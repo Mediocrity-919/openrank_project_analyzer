@@ -121,7 +121,16 @@ app.get('/', (req, res) => {
 // 运行Python脚本的通用函数
 const runPythonScript = async (scriptPath, args, timeout = CONFIG.scriptTimeout) => {
     return new Promise((resolve, reject) => {
-        const command = `${CONFIG.pythonPath} "${scriptPath}" ${args.map(arg => `"${arg}"`).join(' ')}`;
+        // 清理参数，移除所有反引号和多余空格
+        const cleanedArgs = args.map(arg => {
+            // 移除所有反引号
+            let cleaned = arg.replace(/`/g, '');
+            // 移除多余空格
+            cleaned = cleaned.replace(/\s+/g, ' ').trim();
+            return cleaned;
+        });
+        
+        const command = `${CONFIG.pythonPath} "${scriptPath}" ${cleanedArgs.map(arg => `"${arg}"`).join(' ')}`;
         console.log(`执行命令: ${command}`);
         
         const child = exec(command, { 
@@ -131,7 +140,20 @@ const runPythonScript = async (scriptPath, args, timeout = CONFIG.scriptTimeout)
         }, (error, stdout, stderr) => {
             if (error) {
                 console.error(`执行错误: ${error.message}`);
-                reject({ error: error.message, stderr });
+                // 过滤掉已知的警告信息，只保留真正的错误
+                const filteredStderr = stderr
+                    .replace(/Duplicate key in file WindowsPath[^\n]+\n/g, '')
+                    .replace(/Importing plotly failed[^\n]+\n/g, '')
+                    .replace(/\d+:\d+:\d+ - cmdstanpy - INFO - Chain \[\d+\] [^\n]+\n/g, '')
+                    .trim();
+                
+                if (filteredStderr) {
+                    console.error(`过滤后错误: ${filteredStderr}`);
+                    reject({ error: error.message, stderr: filteredStderr });
+                } else {
+                    // 如果只有警告，没有真正的错误，就不拒绝
+                    resolve({ stdout, stderr: '' });
+                }
                 return;
             }
             
@@ -627,159 +649,61 @@ app.post('/api/multi-compare', async (req, res) => {
             csvUrl: null
         };
 
-        // 查找报告文件
+        // 查找报告文件（优先查找带时间戳的）
         const possibleReportNames = [
+            // 带时间戳的报告文件（新的格式，优先）
             `multi_project_comparison_report.txt`,
             `${baseName}_report.txt`,
             `${baseName}_comparison_report.txt`
         ];
 
-        for (const reportName of possibleReportNames) {
-            const reportPath = path.join(CONFIG.resultsDir, reportName);
-            if (fs.existsSync(reportPath)) {
-                results.report = fs.readFileSync(reportPath, 'utf-8');
-                results.reportUrl = `/results/${reportName}`;
-                break;
-            }
-        }
-
-        // 查找图像文件
-        const possibleImageNames = [
-            `multi_trend_comparison.png`,
-            `multi_health_comparison.png`,
-            `multi_stars_trend_comparison.png`,
-            `multi_openrank_trend_comparison.png`,
-            `multi_attention_trend_comparison.png`,
-            `multi_triple_metric_comparison.png`,
-            `${baseName}_comparison.png`,
-            `${baseName}_dashboard.png`
-        ];
-
-        // 查找所有可能的图像文件
-        results.images = []; // 存储所有图像
-        for (const imageName of possibleImageNames) {
-            const imagePath = path.join(CONFIG.resultsDir, imageName);
-            if (fs.existsSync(imagePath)) {
-                const imageBuffer = fs.readFileSync(imagePath);
-                const imageData = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-                const imageUrl = `/results/${imageName}`;
-                
-                // 添加到图像数组
-                results.images.push({
-                    data: imageData,
-                    url: imageUrl,
-                    name: imageName
-                });
-                
-                // 保留第一张图作为主图（保持向后兼容）
-                if (!results.image) {
-                    results.image = imageData;
-                    results.imageUrl = imageUrl;
-                }
-            }
-        }
-
-        // 查找CSV文件
-        const possibleCsvNames = [
-            `${baseName}_data.csv`,
-            `multi_project_data.csv`
-        ];
-
-        for (const csvName of possibleCsvNames) {
-            const csvPath = path.join(CONFIG.resultsDir, csvName);
-            if (fs.existsSync(csvPath)) {
-                results.csvUrl = `/results/${csvName}`;
-                break;
-            }
-        }
-
-        // 无论之前是否找到图片和报告，都尝试在脚本目录和multi_compare_output目录查找所有文件
+        // 首先尝试查找带时间戳的最新文件
         const scriptDir = path.join(__dirname, '../python');
         const multiOutputDir = path.join(scriptDir, 'multi_compare_output');
-        
-        // 查找图像 - 确保处理所有图像，无论是否已找到主图
-        for (const imageName of possibleImageNames) {
-            // 首先尝试在结果目录查找（可能之前已复制）
-            let imagePath = path.join(CONFIG.resultsDir, imageName);
-            let sourceDir = 'results';
+
+        // 首先查找带时间戳的报告文件
+        let foundReport = false;
+        if (fs.existsSync(multiOutputDir)) {
+            const files = fs.readdirSync(multiOutputDir);
+            // 查找最新的带时间戳的报告文件
+            const timestampedReports = files
+                .filter(file => file.startsWith('20') && file.includes('_multi_project_comparison_report.txt'))
+                .sort()
+                .reverse(); // 最新的在前面
             
-            // 如果结果目录中不存在，尝试在scriptDir查找
-            if (!fs.existsSync(imagePath)) {
-                imagePath = path.join(scriptDir, imageName);
-                sourceDir = 'script';
-            }
-            
-            // 如果scriptDir中也不存在，尝试在multiOutputDir查找
-            if (!fs.existsSync(imagePath) && fs.existsSync(multiOutputDir)) {
-                imagePath = path.join(multiOutputDir, imageName);
-                sourceDir = 'multiOutput';
-            }
-            
-            if (fs.existsSync(imagePath)) {
-                // 如果图片在其他目录，需要复制到结果目录
-                if (sourceDir !== 'results') {
-                    const destPath = path.join(CONFIG.resultsDir, imageName);
-                    fs.copyFileSync(imagePath, destPath);
-                }
+            if (timestampedReports.length > 0) {
+                const latestReport = timestampedReports[0];
+                const reportPath = path.join(multiOutputDir, latestReport);
                 
-                const imageBuffer = fs.readFileSync(path.join(CONFIG.resultsDir, imageName));
-                const imageData = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-                const imageUrl = `/results/${imageName}`;
+                // 复制到结果目录
+                const destPath = path.join(CONFIG.resultsDir, latestReport);
+                fs.copyFileSync(reportPath, destPath);
                 
-                // 添加到图像数组
-                if (!results.images) results.images = [];
-                const existingImage = results.images.find(img => img.name === imageName);
-                if (!existingImage) {
-                    results.images.push({
-                        data: imageData,
-                        url: imageUrl,
-                        name: imageName
-                    });
-                }
-                
-                // 设置主图（如果之前没有设置的话）
-                if (!results.image) {
-                    results.image = imageData;
-                    results.imageUrl = imageUrl;
-                }
+                results.report = fs.readFileSync(destPath, 'utf-8');
+                results.reportUrl = `/results/${latestReport}`;
+                foundReport = true;
             }
         }
         
-        // 查找报告
-        if (!results.report) {
+        // 如果没有找到带时间戳的报告，尝试找固定名称的报告（向后兼容）
+        if (!foundReport) {
             for (const reportName of possibleReportNames) {
-                // 首先尝试在结果目录查找
-                let reportPath = path.join(CONFIG.resultsDir, reportName);
-                let sourceDir = 'results';
-                
-                // 如果结果目录中不存在，尝试在scriptDir查找
-                if (!fs.existsSync(reportPath)) {
-                    reportPath = path.join(scriptDir, reportName);
-                    sourceDir = 'script';
-                }
-                
-                // 如果scriptDir中也不存在，尝试在multiOutputDir查找
-                if (!fs.existsSync(reportPath) && fs.existsSync(multiOutputDir)) {
-                    reportPath = path.join(multiOutputDir, reportName);
-                    sourceDir = 'multiOutput';
-                }
-                
+                const reportPath = path.join(CONFIG.resultsDir, reportName);
                 if (fs.existsSync(reportPath)) {
-                    // 如果文件在其他目录，需要复制到结果目录
-                    if (sourceDir !== 'results') {
-                        const destPath = path.join(CONFIG.resultsDir, reportName);
-                        fs.copyFileSync(reportPath, destPath);
-                    }
-                    
-                    results.report = fs.readFileSync(path.join(CONFIG.resultsDir, reportName), 'utf-8');
+                    results.report = fs.readFileSync(reportPath, 'utf-8');
                     results.reportUrl = `/results/${reportName}`;
                     break;
                 }
             }
         }
         
-        // 查找CSV
+        // 查找CSV文件（如果之前没有找到，尝试从脚本目录或multi_compare_output目录）
         if (!results.csvUrl) {
+            const possibleCsvNames = [
+                `${baseName}_data.csv`,
+                `multi_project_data.csv`
+            ];
+            
             for (const csvName of possibleCsvNames) {
                 // 首先尝试在结果目录查找
                 let csvPath = path.join(CONFIG.resultsDir, csvName);
@@ -806,6 +730,153 @@ app.post('/api/multi-compare', async (req, res) => {
                     
                     results.csvUrl = `/results/${csvName}`;
                     break;
+                }
+            }
+        }
+        
+        // 查找所有可能的图像文件（包含时间戳和固定名称）
+        const possibleImagePatterns = [
+            // 带时间戳的文件（新的格式）
+            { pattern: 'multi_trend_comparison.png', type: 'trend' },
+            { pattern: 'multi_health_comparison.png', type: 'health' },
+            { pattern: 'multi_stars_trend_comparison.png', type: 'stars' },
+            { pattern: 'multi_openrank_trend_comparison.png', type: 'openrank' },
+            { pattern: 'multi_attention_trend_comparison.png', type: 'attention' },
+            { pattern: 'multi_triple_metric_comparison.png', type: 'triple' },
+            // 兼容旧格式
+            { pattern: `${baseName}_comparison.png`, type: 'comparison' },
+            { pattern: `${baseName}_dashboard.png`, type: 'dashboard' }
+        ];
+
+        // 查找所有可能的图像文件
+        results.images = []; // 存储所有图像
+        
+        // 首先查找带时间戳的文件（优先）- 简化处理逻辑
+        const timestampedImages = [];
+        if (fs.existsSync(multiOutputDir)) {
+            const files = fs.readdirSync(multiOutputDir);
+            console.log(`[DEBUG] 在multi_compare_output目录中找到 ${files.length} 个文件`);
+            files.forEach(file => {
+                // 检查是否是multi_compare_output目录中的图片文件
+                if (file.startsWith('20') && file.includes('_multi_') && file.endsWith('.png')) {
+                    timestampedImages.push(file);
+                }
+            });
+            console.log(`[DEBUG] 匹配的图片文件: ${timestampedImages.length} 个`);
+            timestampedImages.forEach(f => console.log(`  - ${f}`));
+        } else {
+            console.log(`[DEBUG] multi_compare_output目录不存在`);
+        }
+        
+        // 按时间戳分组处理图片，确保处理最新批次的所有图片
+        if (timestampedImages.length === 0) {
+            console.log('[DEBUG] 没有找到任何图片文件，跳过图片处理');
+        } else {
+            // 修复时间戳提取逻辑 - 提取完整的日期时间戳部分
+            const timestampFromFilename = (filename) => {
+                const match = filename.match(/^([0-9]{8}_[0-9]{6})/);
+                return match ? match[1] : null;
+            };
+            
+            const timestamps = timestampedImages
+                .map(f => timestampFromFilename(f))
+                .filter(ts => ts !== null)
+                .sort()
+                .reverse();
+            
+            const latestTimestamp = timestamps[0]; // 获取最新时间戳
+            
+            console.log(`[DEBUG] 找到 ${timestampedImages.length} 个图片文件，最新时间戳: ${latestTimestamp}`);
+            
+            // 处理最新时间戳的所有图片
+            const latestBatchImages = timestampedImages.filter(f => f.startsWith(latestTimestamp));
+            console.log(`[DEBUG] 处理最新批次图片数量: ${latestBatchImages.length}`);
+            latestBatchImages.forEach(f => console.log(`  - ${f}`));
+            
+            latestBatchImages.forEach(file => {
+                const imagePath = path.join(multiOutputDir, file);
+                console.log(`[DEBUG] 处理文件: ${file}, 路径: ${imagePath}`);
+                if (fs.existsSync(imagePath)) {
+                    // 提取简洁的文件名，但保留时间戳后缀避免冲突
+                    let cleanFileName = file;
+                    // timestamp变量已定义在上面
+                    
+                        if (file.startsWith(latestTimestamp) && file.includes('_multi_')) {
+                            // 提取时间戳后的部分作为文件名
+                            const suffix = file.substring(latestTimestamp.length + 1); // +1 for underscore
+                            cleanFileName = suffix;
+                        }
+                    
+                        // 复制到结果目录（使用简洁文件名，但添加时间戳区分）
+                        const destFileName = `${latestTimestamp}_${cleanFileName}`;
+                        const destPath = path.join(CONFIG.resultsDir, destFileName);
+                        console.log(`[DEBUG] 复制到: ${destPath}`);
+                        fs.copyFileSync(imagePath, destPath);
+                    
+                        const imageBuffer = fs.readFileSync(destPath);
+                        const imageData = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+                        const imageUrl = `/results/${destFileName}`;
+                    
+                        // 确定图片类型
+                        let imageType = 'unknown';
+                        for (const pattern of possibleImagePatterns) {
+                            if (cleanFileName.includes(pattern.pattern.replace('.png', '').replace('multi_', ''))) {
+                                imageType = pattern.type;
+                                break;
+                            }
+                        }
+                    
+                        // 添加到图像数组（使用简洁名称作为显示名）
+                        results.images.push({
+                            data: imageData,
+                            url: imageUrl,
+                            name: cleanFileName,  // 显示用简洁名
+                            fileName: destFileName,  // 实际文件名（带时间戳）
+                            type: imageType,
+                            originalFile: file    // 保留原始文件名用于调试
+                        });
+                    
+                        console.log(`[DEBUG] 添加图片到结果数组: ${cleanFileName} (类型: ${imageType})`);
+                    
+                        // 保留第一张图作为主图
+                        if (!results.image) {
+                            results.image = imageData;
+                            results.imageUrl = imageUrl;
+                            console.log(`[DEBUG] 设置为主图: ${cleanFileName}`);
+                        }
+                } else {
+                    console.log(`[DEBUG] 文件不存在: ${imagePath}`);
+                }
+            });
+            
+            console.log(`[DEBUG] 最终添加到结果数组的图片数量: ${results.images.length}`);
+            results.images.forEach((img, index) => {
+                console.log(`  ${index + 1}. ${img.name} (${img.type})`);
+            });
+        }
+        
+        // 如果没有找到带时间戳的图片，尝试找固定名称的图片（向后兼容）
+        if (results.images.length === 0) {
+            console.log('[DEBUG] 没有找到带时间戳的图片，尝试向后兼容模式');
+            for (const imageName of possibleImagePatterns.map(p => p.pattern)) {
+                const imagePath = path.join(CONFIG.resultsDir, imageName);
+                if (fs.existsSync(imagePath)) {
+                    const imageBuffer = fs.readFileSync(imagePath);
+                    const imageData = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+                    const imageUrl = `/results/${imageName}`;
+                    
+                    // 添加到图像数组
+                    results.images.push({
+                        data: imageData,
+                        url: imageUrl,
+                        name: imageName
+                    });
+                    
+                    // 保留第一张图作为主图
+                    if (!results.image) {
+                        results.image = imageData;
+                        results.imageUrl = imageUrl;
+                    }
                 }
             }
         }
@@ -994,7 +1065,7 @@ function extractComparisonSummary(report, org1, repo1, org2, repo2) {
         // 分配健康评分和层级信息
         if (healthScores.length >= 2) {
             summary.healthScore1 = healthScores[0];
-            summary.healthScore2 = healthScores[1];
+            summary.healthScore2 = healthScores[2];
         } else if (healthScores.length === 1) {
             // 如果只有一个健康评分，可能是报告格式不同，尝试其他方式
             const project1Match = report.match(new RegExp(`${org1}\/${repo1}[^\n]*([\d.]+)\/100`));

@@ -3,3 +3,4 @@
 *.png
 
 python_runtime/
+__pycache__/

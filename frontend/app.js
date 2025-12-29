@@ -340,7 +340,7 @@ function displayAnalysisResults(data) {
     
     // 报告下载
     if (data.results.report) {
-        html += `<button class="btn btn-secondary" onclick="downloadReport('${projectName}', '${data.results.report}')">
+        html += `<button class="btn btn-secondary download-report-btn" data-project-name="${projectName}" data-report-content="${encodeURIComponent(data.results.report)}">
                     <i class="fas fa-download"></i> 下载报告
                 </button>`;
     }
@@ -361,7 +361,7 @@ function displayAnalysisResults(data) {
     
     // 复制报告
     if (data.results.report) {
-        html += `<button class="btn btn-secondary" onclick="copyToClipboard('${data.results.report}')">
+        html += `<button class="btn btn-secondary copy-report-btn" data-report-content="${encodeURIComponent(data.results.report)}">
                     <i class="fas fa-copy"></i> 复制报告
                 </button>`;
     }
@@ -412,7 +412,45 @@ function displayAnalysisResults(data) {
     
     container.innerHTML = html;
     container.style.display = 'block';
+    
+    // 重新绑定报告按钮事件监听器
+    refreshReportButtonListeners();
 }
+
+// 切换下拉菜单显示状态
+function toggleDropdown(button) {
+    const dropdown = button.closest('.dropdown');
+    dropdown.classList.toggle('active');
+}
+
+// 下载所有图片
+function downloadAllImages(element) {
+    const dropdown = element.closest('.dropdown');
+    const imageLinks = dropdown.querySelectorAll('.dropdown-item:not(.download-all-images)');
+    
+    imageLinks.forEach(link => {
+        if (link.href && link.href !== '#') {
+            // 创建隐藏的<a>标签并触发点击
+            const a = document.createElement('a');
+            a.href = link.href;
+            a.download = link.download;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    });
+}
+
+// 点击页面其他地方关闭下拉菜单
+document.addEventListener('click', function(e) {
+    const dropdowns = document.querySelectorAll('.dropdown');
+    dropdowns.forEach(dropdown => {
+        if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
+});
 
 // 显示对比结果
 function displayComparisonResults(data) {
@@ -438,7 +476,7 @@ function displayComparisonResults(data) {
     
     // 报告下载
     if (data.results.report) {
-        html += `<button class="btn btn-secondary" onclick="downloadReport('对比报告', '${data.results.report}')">
+        html += `<button class="btn btn-secondary download-report-btn" data-project-name="对比报告" data-report-content="${encodeURIComponent(data.results.report)}">
                     <i class="fas fa-download"></i> 下载报告
                 </button>`;
     }
@@ -459,7 +497,7 @@ function displayComparisonResults(data) {
     
     // 复制报告
     if (data.results.report) {
-        html += `<button class="btn btn-secondary" onclick="copyToClipboard('${data.results.report}')">
+        html += `<button class="btn btn-secondary copy-report-btn" data-report-content="${encodeURIComponent(data.results.report)}">
                     <i class="fas fa-copy"></i> 复制报告
                 </button>`;
     }
@@ -525,6 +563,9 @@ function displayComparisonResults(data) {
     
     container.innerHTML = html;
     container.style.display = 'block';
+    
+    // 重新绑定报告按钮事件监听器
+    refreshReportButtonListeners();
 }
 
 // 历史记录筛选
@@ -598,6 +639,7 @@ function displayHistoryResults(results, filter) {
         let imageLinks = '';
         if (result.type === 'multi' && result.files.images && result.files.images.length > 1) {
             // 如果是多项目对比且有多张图片，显示查看所有图片的链接
+            console.log(`[DEBUG] 多项目对比历史记录，图片数量: ${result.files.images.length}`);
             imageLinks = `
                 <div class="dropdown">
                     <button class="btn btn-secondary dropdown-toggle">
@@ -605,7 +647,7 @@ function displayHistoryResults(results, filter) {
                     </button>
                     <div class="dropdown-menu">
                         ${result.files.images.map((img, index) => `
-                            <a href="${img.url || result.files.image}" target="_blank" class="dropdown-item" onclick="event.stopPropagation();">
+                            <a href="${img.url || img.data || result.files.image}" target="_blank" class="dropdown-item" onclick="event.stopPropagation();">
                                 ${getReadableImageTitle(img.name || `图片${index + 1}`)}
                             </a>
                         `).join('')}
@@ -709,7 +751,23 @@ function getPotentialClass(potential) {
 }
 
 // 下载报告
-function downloadReport(filename, content) {
+function downloadReport(event) {
+    let filename, content;
+    
+    // 如果是通过事件调用，从按钮的data属性获取数据
+    if (event && event.target) {
+        const btn = event.target.closest('.download-report-btn');
+        if (btn) {
+            filename = btn.dataset.projectName;
+            content = decodeURIComponent(btn.dataset.reportContent);
+        }
+    } 
+    // 保持向后兼容，支持直接调用
+    else {
+        filename = arguments[0];
+        content = arguments[1];
+    }
+    
     if (!content) {
         showMessage('没有可下载的内容', 'error');
         return;
@@ -727,7 +785,21 @@ function downloadReport(filename, content) {
 }
 
 // 复制到剪贴板
-function copyToClipboard(text) {
+function copyToClipboard(event) {
+    let text;
+    
+    // 如果是通过事件调用，从按钮的data属性获取数据
+    if (event && event.target) {
+        const btn = event.target.closest('.copy-report-btn');
+        if (btn) {
+            text = decodeURIComponent(btn.dataset.reportContent);
+        }
+    }
+    // 保持向后兼容，支持直接调用
+    else {
+        text = arguments[0];
+    }
+    
     if (!text) {
         showMessage('没有可复制的内容', 'error');
         return;
@@ -741,8 +813,44 @@ function copyToClipboard(text) {
     });
 }
 
+// 添加事件监听器
+function addReportButtonListeners() {
+    // 为所有下载报告按钮添加事件监听器
+    document.querySelectorAll('.download-report-btn').forEach(btn => {
+        btn.addEventListener('click', downloadReport);
+    });
+    
+    // 为所有复制报告按钮添加事件监听器
+    document.querySelectorAll('.copy-report-btn').forEach(btn => {
+        btn.addEventListener('click', copyToClipboard);
+    });
+}
+
+// 当DOM内容加载完成后添加事件监听器
+document.addEventListener('DOMContentLoaded', addReportButtonListeners);
+
+// 在结果显示后重新添加事件监听器，确保动态生成的按钮也能被正确绑定
+function refreshReportButtonListeners() {
+    // 移除旧的事件监听器（如果有）
+    document.querySelectorAll('.download-report-btn').forEach(btn => {
+        btn.removeEventListener('click', downloadReport);
+    });
+    document.querySelectorAll('.copy-report-btn').forEach(btn => {
+        btn.removeEventListener('click', copyToClipboard);
+    });
+    
+    // 添加新的事件监听器
+    addReportButtonListeners();
+}
+
 // 显示多项目对比结果
 function displayMultiComparisonResults(data) {
+    console.log('[DEBUG] 显示多项目对比结果');
+    console.log('[DEBUG] 项目数量:', data.projects ? data.projects.length : 0);
+    console.log('[DEBUG] results对象:', data.results);
+    console.log('[DEBUG] results.images:', data.results ? data.results.images : 'null');
+    console.log('[DEBUG] images数量:', data.results && data.results.images ? data.results.images.length : 0);
+    
     const container = document.getElementById('multi-compare-results');
     if (!container) return;
     const summary = data.summary || {};
@@ -755,29 +863,54 @@ function displayMultiComparisonResults(data) {
             <div class="result-actions">`;
     
     // 报告下载
-    if (data.results.report) {
-        html += `<button class="btn btn-secondary" onclick="downloadReport('多项目对比报告', '${data.results.report}')">
+    if (data.results && data.results.report) {
+        html += `<button class="btn btn-secondary download-report-btn" data-project-name="多项目对比报告" data-report-content="${encodeURIComponent(data.results.report)}">
                     <i class="fas fa-download"></i> 下载报告
                 </button>`;
     }
     
-    // 图片下载
-    if (data.results.imageUrl) {
+    // 图片下载 - 修复图片访问路径
+    const images = data.results && data.results.images ? data.results.images : [];
+    console.log(`[DEBUG] 准备显示 ${images.length} 张图片`);
+    
+    if (images.length > 0) {
+        // 如果有多张图片，显示下拉菜单
+        html += `
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" onclick="toggleDropdown(this)">
+                    <i class="fas fa-image"></i> 下载图片
+                </button>
+                <div class="dropdown-menu">
+                    <a href="#" class="dropdown-item download-all-images" onclick="downloadAllImages(this)">
+                        <i class="fas fa-download"></i> 下载所有图片
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    ${images.map((img, index) => {
+                        console.log(`[DEBUG] 图片${index + 1}:`, img);
+                        return `
+                        <a href="${img.data}" download="${img.name}" class="dropdown-item">
+                            ${getReadableImageTitle(img.name || `图片${index + 1}`)}
+                        </a>`;
+                    }).join('')}
+                </div>
+            </div>`;
+    } else if (data.results && data.results.imageUrl) {
+        // 否则显示单个图片链接
         html += `<a href="${data.results.imageUrl}" download class="btn btn-secondary">
-                    <i class="fas fa-image"></i> 下载主图
+                    <i class="fas fa-image"></i> 下载图片
                 </a>`;
     }
     
     // CSV下载
-    if (data.results.csvUrl) {
+    if (data.results && data.results.csvUrl) {
         html += `<a href="${data.results.csvUrl}" download class="btn btn-secondary">
                     <i class="fas fa-file-csv"></i> 下载CSV
                 </a>`;
     }
     
     // 复制报告
-    if (data.results.report) {
-        html += `<button class="btn btn-secondary" onclick="copyToClipboard('${data.results.report}')">
+    if (data.results && data.results.report) {
+        html += `<button class="btn btn-secondary copy-report-btn" data-report-content="${encodeURIComponent(data.results.report)}">
                     <i class="fas fa-copy"></i> 复制报告
                 </button>`;
     }
@@ -810,14 +943,16 @@ function displayMultiComparisonResults(data) {
     
     html += `</div></div>`;
     
-    // 如果有多张图像，显示所有图像
-    if (data.results.images && data.results.images.length > 0) {
+    // 如果有多张图像，显示所有图像 - 修复图片访问路径
+    if (images.length > 0) {
+        console.log(`[DEBUG] 在HTML中渲染 ${images.length} 张图片`);
         html += `
             <div class="result-image">
                 <h4><i class="fas fa-chart-bar"></i> 多项目对比图表</h4>
                 <div class="image-gallery">`;
         
-        data.results.images.forEach((image, index) => {
+        images.forEach((image, index) => {
+            console.log(`[DEBUG] 渲染图片${index + 1}:`, image.name);
             html += `
                 <div class="image-item">
                     <h5>${getReadableImageTitle(image.name)}</h5>
@@ -834,7 +969,7 @@ function displayMultiComparisonResults(data) {
         `;
     }
     // 如果只有单张图像（向后兼容）
-    else if (data.results.image) {
+    else if (data.results && data.results.image) {
         html += `
             <div class="result-image">
                 <h4><i class="fas fa-chart-bar"></i> 多项目对比图表</h4>
@@ -844,7 +979,7 @@ function displayMultiComparisonResults(data) {
     }
     
     // 如果有报告
-    if (data.results.report) {
+    if (data.results && data.results.report) {
         html += `
             <div class="result-report">
                 <h4><i class="fas fa-file-alt"></i> 详细报告</h4>
@@ -867,6 +1002,9 @@ function displayMultiComparisonResults(data) {
     
     container.innerHTML = html;
     container.style.display = 'block';
+    
+    // 重新绑定报告按钮事件监听器
+    refreshReportButtonListeners();
 }
 
 // 获取图像标题的可读版本

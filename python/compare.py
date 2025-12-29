@@ -1,9 +1,3 @@
-# compare.py
-"""
-GitHub项目对比分析器 - 基于v4.py组件
-对比两个项目的健康程度、发展趋势和潜力
-"""
-
 import sys
 import requests
 import pandas as pd
@@ -113,7 +107,7 @@ class ProjectDataFetcher:
         return tier, probabilities, confidence
     
     def analyze_vitality(self):
-        """分析项目活力状态"""
+        """分析项目活力状态（与v4.py保持一致）"""
         if 'activity' not in self.df or self.df.empty:
             return 'UNKNOWN'
         
@@ -126,14 +120,17 @@ class ProjectDataFetcher:
         slope = linregress(range(len(recent)), recent.values).slope
         peak, current = activity.max(), recent.mean()
         
-        if slope > 0.5:
+        if slope > 0:
             return 'THRIVING'
-        elif slope > 0:
+        
+        # 获取项目层级
+        tier, _, _ = self.get_tier_classification()
+        
+        if tier in ['GIANT', 'MATURE'] and current > peak * 0.2:
             return 'STABLE'
-        elif current > peak * 0.3:
-            return 'DORMANT'
-        else:
+        if current < peak * 0.1:
             return 'ZOMBIE'
+        return 'DORMANT'
 
 
 class ProjectComparativeAnalyzer:
@@ -232,16 +229,16 @@ class ProjectComparativeAnalyzer:
             'potential': analysis['potential']
         }
         
-        # 计算风险评分（简化版）
-        risk_score = self._calculate_risk_score(analysis)
-        analysis['risk'] = {'score': risk_score}
+        # 计算风险评分（与v4.py保持一致）
+        risk = self._calculate_risk_score(analysis, project_fetcher.df)
+        analysis['risk'] = risk
         
         # 生成预测
         predictor = ProphetPredictor()
         predictions = {}
         for metric in ['openrank', 'attention', 'stars']:
             if metric in project_fetcher.df:
-                pred_result = predictor.predict(project_fetcher.df, metric, periods=6)
+                pred_result = predictor.predict(project_fetcher.df, metric, periods=6, tier=tier, vitality=analysis['vitality'])
                 predictions[metric] = pred_result
         analysis['predictions'] = predictions
         
@@ -258,24 +255,45 @@ class ProjectComparativeAnalyzer:
         
         return analysis
     
-    def _calculate_risk_score(self, analysis):
-        """计算风险评分"""
-        risk = 0
+    def _calculate_risk_score(self, analysis, df):
+        """计算风险评分（与v4.py保持一致）"""
+        risk_score = 0
+        alerts = []
         
+        # 活跃度斜率计算
+        if 'activity' in df:
+            from scipy.stats import linregress
+            slope = linregress(range(min(12, len(df))), 
+                             df['activity'].tail(12).values).slope
+            if slope < -0.5:
+                risk_score += 30
+                alerts.append('活跃度显著下降')
+            elif slope < 0:
+                risk_score += 15
+        
+        # 阻力状态判断
+        if analysis['resistance']['status'] == 'HEAVY':
+            risk_score += 25
+            alerts.append('技术债阻力高')
+        
+        # 活力状态判断
         if analysis['vitality'] == 'ZOMBIE':
-            risk += 40
+            risk_score += 30
+            alerts.append('项目处于僵尸状态')
         elif analysis['vitality'] == 'DORMANT':
-            risk += 20
+            risk_score += 15
         
-        if analysis['resistance']['total'] > 70:
-            risk += 30
-        elif analysis['resistance']['total'] > 50:
-            risk += 15
+        # 风险等级判断
+        if risk_score >= 50:
+            level = 'CRITICAL'
+        elif risk_score >= 30:
+            level = 'HIGH'
+        elif risk_score >= 15:
+            level = 'MEDIUM'
+        else:
+            level = 'LOW'
         
-        if analysis['bus_factor']['risk_level'] in ['CRITICAL', 'HIGH']:
-            risk += 20
-        
-        return min(100, risk)
+        return {'score': risk_score, 'level': level, 'alerts': alerts}
     
     def _calculate_potential_score(self, analysis):
         """
