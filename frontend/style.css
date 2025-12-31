@@ -810,6 +810,7 @@ body {
     margin-top: 5px;
 }
 
+.dropdown.active .dropdown-menu,
 .dropdown:hover .dropdown-menu {
     display: block;
 }

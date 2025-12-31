@@ -1,7 +1,3 @@
-"""
-支持任意数量项目的综合对比分析
-"""
-
 import sys
 import requests
 import pandas as pd
@@ -147,8 +143,8 @@ class ProjectDataFetcher:
         tier, probabilities, confidence = classifier.predict_proba(metrics)
         return tier, probabilities, confidence
     
-    def analyze_vitality(self):
-        """分析项目活力状态"""
+    def analyze_vitality(self, tier=None):
+        """分析项目活力状态（与v4.py保持一致）"""
         if 'activity' not in self.df or self.df.empty:
             return 'UNKNOWN'
         
@@ -161,14 +157,18 @@ class ProjectDataFetcher:
         slope = linregress(range(len(recent)), recent.values).slope
         peak, current = activity.max(), recent.mean()
         
-        if slope > 0.5:
+        if slope > 0:
             return 'THRIVING'
-        elif slope > 0:
+        
+        # 修复：优先使用传入的 tier，避免重复计算导致的不一致
+        if tier is None:
+            tier, _, _ = self.get_tier_classification()
+        
+        if tier in ['GIANT', 'MATURE'] and current > peak * 0.2:
             return 'STABLE'
-        elif current > peak * 0.3:
-            return 'DORMANT'
-        else:
+        if current < peak * 0.1:
             return 'ZOMBIE'
+        return 'DORMANT'
 
 class MultiProjectAnalyzer:
     """多项目对比分析器"""
@@ -179,6 +179,10 @@ class MultiProjectAnalyzer:
         self.analyses = []  
         self.project_names = []  
         self.output_dir = OUTPUT_DIR
+        
+        # 生成唯一时间戳前缀，确保文件名不冲突
+        self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        print(f"生成时间戳: {self.timestamp}")
     
     def fetch_all_data(self) -> bool:
         """获取所有项目的数据"""
@@ -213,14 +217,14 @@ class MultiProjectAnalyzer:
         # print("所有项目分析完成")
     
     def _analyze_single_project(self, project):
-        """分析单个项目"""
+        """分析单个项目（与v4.py保持一致）"""
         analysis = {}
         analysis['project_name'] = project.project_name
         tier, probabilities, confidence = project.get_tier_classification()
         analysis['tier'] = tier
         analysis['tier_probabilities'] = probabilities
         analysis['tier_confidence'] = confidence
-        analysis['vitality'] = project.analyze_vitality()
+        analysis['vitality'] = project.analyze_vitality(tier=tier)
         momentum_calc = MomentumCalculator()
         analysis['momentum'] = momentum_calc.calculate(project.df)
         resistance_calc = ResistanceCalculator()
@@ -230,21 +234,40 @@ class MultiProjectAnalyzer:
         bus_factor_calc = BusFactorCalculator()
         analysis['bus_factor'] = bus_factor_calc.calculate(project.df)
 
-        ahp_evaluator = AHPHealthEvaluator()
+        # 构建trend_3d（与v4.py保持一致）
+        momentum = analysis['momentum']
+        resistance = analysis['resistance']
+        potential = analysis['potential']
+        potential_factor = min(1.5, 0.5 + potential['remaining_space'] / 100)
+        trend_score = (momentum['total'] - resistance['total'] * 0.5) * potential_factor
+        if trend_score >= 60:
+            trend_class, desc = 'STRONG_UP', '强势上行'
+        elif trend_score >= 30:
+            trend_class, desc = 'MODERATE_UP', '温和上行'
+        elif trend_score >= 0:
+            trend_class, desc = 'STABLE', '横盘稳定'
+        elif trend_score >= -30:
+            trend_class, desc = 'MODERATE_DOWN', '温和下行'
+        else:
+            trend_class, desc = 'STRONG_DOWN', '趋势恶化'
         trend_3d = {
-            'momentum': analysis['momentum'],
-            'resistance': analysis['resistance'],
-            'potential': analysis['potential']
+            'trend_score': round(trend_score, 1),
+            'trend_class': trend_class,
+            'description': desc,
+            'momentum': momentum,
+            'resistance': resistance,
+            'potential': potential
         }
-        
-        risk_score = self._calculate_risk_score(analysis, project)
+
+        risk_score = self._calculate_risk_score(analysis, project.df)
         analysis['risk'] = risk_score
         
         predictor = ProphetPredictor()
         predictions = {}
-        for metric in ['openrank', 'attention', 'stars']:
+        for metric in ['openrank', 'activity', 'stars', 'participants']:
             if metric in project.df:
                 try:
+                    # 与v4.py保持一致，不传递tier和vitality参数
                     pred_result = predictor.predict(project.df, metric, periods=6)
                     predictions[metric] = pred_result
                 except Exception as e:
@@ -252,6 +275,7 @@ class MultiProjectAnalyzer:
                     predictions[metric] = {}
         analysis['predictions'] = predictions
         
+        ahp_evaluator = AHPHealthEvaluator()
         try:
             health_score, dimension_scores = ahp_evaluator.calculate_health_score(
                 analysis['vitality'], trend_3d, analysis['risk'], tier, predictions
@@ -267,44 +291,38 @@ class MultiProjectAnalyzer:
         grades = [(85, 'A+'), (75, 'A'), (65, 'B+'), (55, 'B'), (45, 'C'), (35, 'D'), (0, 'F')]
         analysis['health_grade'] = next(g for t, g in grades if analysis['health_score'] >= t)
         
-        # print(f"{project.project_name}: 健康评分 {analysis['health_score']:.1f} ({analysis['health_grade']})")
         return analysis
     
-    def _calculate_risk_score(self, analysis, project=None):
-        """计算风险评分 - 与v4.py保持一致"""
+    def _calculate_risk_score(self, analysis, df):
+        """计算风险评分（与v4.py和compare.py保持一致）"""
         risk_score = 0
+        alerts = []
         
-        # 如果提供了project，考虑活跃度趋势
-        if project and hasattr(project, 'df') and 'activity' in project.df:
+        # 活跃度斜率计算
+        if 'activity' in df:
             from scipy.stats import linregress
-            df = project.df
-            x_vals = range(min(12, len(df)))
-            y_vals = df['activity'].tail(12).values
-            if len(y_vals) >= 2:  # 确保有足够的数据点进行回归
-                slope, intercept, r_value, p_value, std_err = linregress(x_vals, y_vals)
-                if slope < -0.5:
-                    risk_score += 30
-                elif slope < 0:
-                    risk_score += 15
+            slope = linregress(range(min(12, len(df))), 
+                             df['activity'].tail(12).values).slope
+            if slope < -0.5:
+                risk_score += 30
+                alerts.append('活跃度显著下降')
+            elif slope < 0:
+                risk_score += 15
         
-        # 阻力状态评估
-        if 'resistance' in analysis and 'status' in analysis['resistance']:
-            if analysis['resistance']['status'] == 'HEAVY':
-                risk_score += 25
+        # 阻力状态判断
+        if analysis['resistance']['status'] == 'HEAVY':
+            risk_score += 25
+            alerts.append('技术债阻力高')
         
-        # 活力状态评估（与v4.py保持一致）
+        # 活力状态判断
         vitality = analysis['vitality']
         if vitality == 'ZOMBIE':
-            risk_score += 30  # 与v4.py保持一致
+            risk_score += 30
+            alerts.append('项目处于僵尸状态')
         elif vitality == 'DORMANT':
-            risk_score += 15  # 与v4.py保持一致
+            risk_score += 15
         
-        # 巴士系数风险
-        if 'bus_factor' in analysis and 'risk_level' in analysis['bus_factor']:
-            if analysis['bus_factor']['risk_level'] in ['CRITICAL', 'HIGH']:
-                risk_score += 20  # 保留此评估
-        
-        # 返回完整的风险字典结构，与v4.py保持一致
+        # 风险等级判断
         if risk_score >= 50:
             level = 'CRITICAL'
         elif risk_score >= 30:
@@ -314,7 +332,7 @@ class MultiProjectAnalyzer:
         else:
             level = 'LOW'
         
-        return {'score': risk_score, 'level': level, 'alerts': []}
+        return {'score': risk_score, 'level': level, 'alerts': alerts}
     
     def generate_visualizations(self):
         """生成所有可视化图表"""
@@ -343,10 +361,15 @@ class MultiProjectAnalyzer:
             fig, ax = plt.subplots(figsize=(12, 6))
             colors = list(COLORS.values())
             
+            has_data = False
+            projects_with_data = []
+            
             for i, (project, analysis) in enumerate(zip(self.projects, self.analyses)):
                 if metric not in project.df:
                     continue
                 
+                has_data = True
+                projects_with_data.append(project.project_name)
                 color = colors[i % len(colors)]
                 data = project.df[metric]
                 ax.plot(data.index, data.values, color=color, lw=2, label=project.project_name)
@@ -362,12 +385,23 @@ class MultiProjectAnalyzer:
                         ax.plot(future_dates, pred_result['forecast'], color=color, 
                                lw=2, linestyle='--', alpha=0.7)
             
-            ax.set_title(title, fontsize=14, fontweight='bold')
-            ax.tick_params(axis='x', rotation=30)
-            ax.grid(True, alpha=0.3)
-            ax.legend(loc='best', fontsize=9)
-            ax.set_ylabel(metric.capitalize(), fontsize=10)
-            filename = f"multi_{metric}_trend_comparison.png"
+            # 如果有数据，生成正常图表
+            if has_data:
+                ax.set_title(title, fontsize=14, fontweight='bold')
+                ax.tick_params(axis='x', rotation=0)  # 修复：取消X轴倾斜，设置为水平
+                ax.grid(True, alpha=0.3)
+                ax.legend(loc='best', fontsize=9)
+                ax.set_ylabel(metric.capitalize(), fontsize=10)
+            else:
+                # 如果没有数据，生成提示图表
+                ax.text(0.5, 0.5, f'{title}\n\n暂无可用数据\n\n此指标在以下项目中不可用：\n• {chr(10).join([p.project_name for p in self.projects])}', 
+                       ha='center', va='center', fontsize=16, 
+                       bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgray", alpha=0.8))
+                ax.set_xlim(0, 1)
+                ax.set_ylim(0, 1)
+                ax.axis('off')
+            
+            filename = f"{self.timestamp}_multi_{metric}_trend_comparison.png"
             filepath = os.path.join(self.output_dir, filename)
             plt.tight_layout()
             plt.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='white')
@@ -395,10 +429,10 @@ class MultiProjectAnalyzer:
             
             ax.set_title('健康程度对比', fontsize=14, fontweight='bold')
             ax.set_ylabel('健康评分', fontsize=10)
-            ax.tick_params(axis='x', rotation=30)
+            ax.tick_params(axis='x', rotation=0)  # 修复：取消X轴倾斜，设置为水平
             ax.grid(True, axis='y', alpha=0.3)
             ax.set_ylim(0, 100)
-            filename = "multi_health_comparison.png"
+            filename = f"{self.timestamp}_multi_health_comparison.png"
             filepath = os.path.join(self.output_dir, filename)
             plt.tight_layout()
             plt.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='white')
@@ -430,12 +464,12 @@ class MultiProjectAnalyzer:
             
             ax.set_title('发展趋势对比 (动量)', fontsize=14, fontweight='bold')
             ax.set_ylabel('动量评分', fontsize=10)
-            ax.tick_params(axis='x', rotation=30)
+            ax.tick_params(axis='x', rotation=0)  # 修复：取消X轴倾斜，设置为水平
             ax.grid(True, axis='y', alpha=0.3)
             ax.set_ylim(0, 100)
             
             # 保存图表
-            filename = "multi_trend_comparison.png"
+            filename = f"{self.timestamp}_multi_trend_comparison.png"
             filepath = os.path.join(self.output_dir, filename)
             plt.tight_layout()
             plt.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='white')
@@ -487,13 +521,13 @@ class MultiProjectAnalyzer:
             ax.set_title('阻力、潜力、稳定性对比', fontsize=14, fontweight='bold')
             ax.set_ylabel('评分', fontsize=10)
             ax.set_xticks(x)
-            ax.set_xticklabels(project_names, rotation=30)
+            ax.set_xticklabels(project_names, rotation=0)  # 修复：取消X轴倾斜，设置为水平
             ax.legend()
             ax.grid(True, axis='y', alpha=0.3)
             ax.set_ylim(0, 100)
             
             # 保存图表
-            filename = "multi_triple_metric_comparison.png"
+            filename = f"{self.timestamp}_multi_triple_metric_comparison.png"
             filepath = os.path.join(self.output_dir, filename)
             plt.tight_layout()
             plt.savefig(filepath, dpi=150, bbox_inches='tight', facecolor='white')
@@ -630,12 +664,12 @@ class MultiProjectAnalyzer:
         # 生成图像路径信息
         report += f"\n5. 生成的可视化图表:\n"
         chart_files = [
-            "multi_openrank_trend_comparison.png",
-            "multi_attention_trend_comparison.png", 
-            "multi_stars_trend_comparison.png",
-            "multi_health_comparison.png",
-            "multi_trend_comparison.png",
-            "multi_triple_metric_comparison.png"
+            f"{self.timestamp}_multi_openrank_trend_comparison.png",
+            f"{self.timestamp}_multi_attention_trend_comparison.png", 
+            f"{self.timestamp}_multi_stars_trend_comparison.png",
+            f"{self.timestamp}_multi_health_comparison.png",
+            f"{self.timestamp}_multi_trend_comparison.png",
+            f"{self.timestamp}_multi_triple_metric_comparison.png"
         ]
         for chart in chart_files:
             report += f"   - {chart}\n"
@@ -694,7 +728,7 @@ class MultiProjectAnalyzer:
 """
         
         # 保存报告
-        filename = "multi_project_comparison_report.txt"
+        filename = f"{self.timestamp}_multi_project_comparison_report.txt"
         filepath = os.path.join(self.output_dir, filename)
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
